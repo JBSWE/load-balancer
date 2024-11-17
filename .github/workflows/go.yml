@@ -1,10 +1,9 @@
-name: load-balancer Pipeline
+name: load-balancer pipeline
 
 on:
   push:
     branches:
       - main
-      - '**'
   pull_request:
     branches:
       - main
@@ -35,21 +34,25 @@ jobs:
             ${{ runner.os }}-go-${{ matrix.go-version }}-
 
       - name: Install dependencies
-        run: |
-          go mod download
+        run: go mod download
 
-      - name: Run tests
+      - name: Install Docker Compose
         run: |
-          go test -v ./...
-
-      - name: Run go vet
-        run: |
-          go vet ./...
-
-      - name: Format Go code
-        run: |
-          gofmt -s -w .
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
 
       - name: Build the application
-        run: |
-          go build -o load-balancer ./cmd/server
+        run: go build -o load-balancer ./cmd/server
+
+      - name: Format Go code
+        run: gofmt -s -w .
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test -v $(go list ./... | grep -v '/integration')
+
+      - name: Run integration tests
+        run: make run-integration-tests

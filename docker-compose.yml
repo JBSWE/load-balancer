@@ -1,0 +1,60 @@
+services:
+
+  server1:
+    image: mendhak/http-https-echo
+    ports:
+      - "5001:8080"
+    networks:
+      - load-balancer-network
+
+  server2:
+    image: mendhak/http-https-echo
+    ports:
+      - "5002:8080"
+    networks:
+      - load-balancer-network
+
+  server3:
+    image: mendhak/http-https-echo
+    ports:
+      - "5003:8080"
+    networks:
+      - load-balancer-network
+
+  server4:
+    image: mendhak/http-https-echo
+    ports:
+      - "5004:8080"
+    networks:
+      - load-balancer-network
+
+  server5:
+    image: mendhak/http-https-echo
+    ports:
+      - "5005:80"
+    networks:
+      - load-balancer-network
+
+  load-balancer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - GO111MODULE=on
+      - DOCKER_ENV=true
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - server1
+      - server2
+      - server3
+      - server4
+      - server5
+    networks:
+      - load-balancer-network
+
+networks:
+  load-balancer-network:
+    driver: bridge

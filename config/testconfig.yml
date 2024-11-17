@@ -1,0 +1,8 @@
+port: ":8080"
+healthCheckInterval: "2s"
+servers:
+  - "http://server1:8080"
+  - "http://server2:8080"
+  - "http://server3:8080"
+  - "http://server4:8080"
+  - "http://server5:8080"
