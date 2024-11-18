@@ -9,7 +9,16 @@ The project is composed of two main components:
 - **Round Robin API**: The load balancer that accepts POST requests, determines which application API instance to route the request to, and forwards the request accordingly.
 
 ### How it Works
-The Round Robin API uses Go’s `http.ReverseProxy` to direct load based on a round-robin implementation. If the server is healthy and not excluded due to slow responses, the server is chosen in a round-robin approach (e.g., 1, 2, 3, 4). If the server is unhealthy or excluded, the system skips it and selects the next healthy server.
+The Round Robin API uses a custom reverse proxy implementation to route requests to available Application API instances based on a round-robin approach. The system performs health checks on the Application API instances and excludes those that are slow or unhealthy.
+
+Each time a request comes in, the Round Robin API selects a healthy server based on the round-robin algorithm and forwards the request. If a server is slow or unresponsive, it is excluded from future routing decisions until it recovers.
+
+### Custom Reverse Proxy
+Rather than relying on Go’s built-in http.ReverseProxy, we implemented a custom reverse proxy that manages routing and ensures that returned traffic is handled appropriately. This custom proxy:
+
+- Handles the forwarding of requests to one of the available Application API instances.
+- Takes into account server health and response time.
+- Excludes slow or unhealthy servers from the rotation when needed.
 
 ## 2. Run Docker Compose
 
@@ -77,10 +86,11 @@ This will start up the system (using Docker Compose if configured) and perform e
 
 ## 6. Future Improvements
 - Dynamic Scaling: Allow the Round Robin API to automatically discover new Application API instances based on service discovery or configuration updates.
-- Advanced Health Checks: Implement more advanced health checks, such as checking server response time, load, or other metrics.
+- Advanced Health Checks: Implement more advanced health checks, such as checking server load, or other metrics.
 - Metrics and Monitoring: Integrate with a monitoring system to collect metrics about server health, request distribution, and performance.
 - Retry Logic: Implement retry logic for failed requests to slow or temporarily failed servers.
 - Configuration Management: Support for different configurations of the round-robin algorithm (e.g., weighted round robin) or different health check intervals.
+- Add integration tests for testing health check - this currently holds the logic for handling server state which is difficult to test in this current implementation.
 
 ## 7. Conclusion
 This project demonstrates a simple, robust, and scalable implementation of a Round Robin Load Balancer API with features such as health checks and exclusion for slow servers. It can be easily extended with additional features such as metrics, retries, or dynamic scaling.
