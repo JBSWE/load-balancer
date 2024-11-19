@@ -10,23 +10,38 @@ import (
 
 func setupHealthCheck(s *loadbalancer.Server, healthCheckInterval time.Duration, logger *zap.Logger) {
 	go func() {
-		for range time.Tick(healthCheckInterval) {
-			start := time.Now()
-			res, err := http.Head(s.URL)
-			s.Latency = time.Since(start)
-			if err != nil || res.StatusCode != http.StatusOK {
-				logger.Warn("Server is down", zap.String("url", s.URL), zap.Error(err))
+		for {
+			s.Latency = performHealthCheck(s.URL)
+
+			if !isHealthy(s.Latency, healthCheckInterval) {
 				s.IsHealthy = false
+				s.ExclusionTime = time.Now()
+				logger.Warn("Server excluded due to failure or high latency",
+					zap.String("url", s.URL),
+					zap.Duration("latency", s.Latency))
 			} else {
-				if s.Latency < 2*time.Second {
-					s.IsHealthy = true
-				} else {
-					s.IsHealthy = false
-					s.ExclusionTime = time.Now()
-				}
+				s.IsHealthy = true
+				logger.Info("Server health check passed",
+					zap.String("url", s.URL),
+					zap.Duration("latency", s.Latency))
 			}
+
+			time.Sleep(healthCheckInterval)
 		}
 	}()
+}
+
+func performHealthCheck(url string) time.Duration {
+	start := time.Now()
+	res, err := http.Head(url)
+	if err != nil || res.StatusCode != http.StatusOK {
+		return 0
+	}
+	return time.Since(start)
+}
+
+func isHealthy(latency time.Duration, latencyThreshold time.Duration) bool {
+	return latency > 0 && latency < latencyThreshold
 }
 
 func StartServer(cfg config.Config, lb loadbalancer.LoadBalancer, servers []*loadbalancer.Server, logger *zap.Logger) {
