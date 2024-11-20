@@ -1,6 +1,7 @@
 package loadbalancer
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -27,6 +28,7 @@ func TestIsExcludable_NoExclusionTime(t *testing.T) {
 		URL:           "http://localhost:8081",
 		IsHealthy:     true,
 		ExclusionTime: time.Time{},
+		Mu:            sync.Mutex{},
 	}
 
 	excludable := server.IsExcludable()
@@ -39,6 +41,7 @@ func TestIsExcludable_ExclusionTimeInThePast(t *testing.T) {
 		URL:           "http://localhost:8081",
 		IsHealthy:     true,
 		ExclusionTime: time.Now().Add(-1 * time.Hour),
+		Mu:            sync.Mutex{},
 	}
 
 	excludable := server.IsExcludable()
@@ -51,6 +54,7 @@ func TestIsExcludable_ExclusionTimeInTheFuture(t *testing.T) {
 		URL:           "http://localhost:8081",
 		IsHealthy:     true,
 		ExclusionTime: time.Now().Add(1 * time.Hour),
+		Mu:            sync.Mutex{},
 	}
 
 	excludable := server.IsExcludable()

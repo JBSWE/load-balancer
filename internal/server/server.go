@@ -11,7 +11,7 @@ import (
 func setupHealthCheck(s *loadbalancer.Server, healthCheckInterval time.Duration, logger *zap.Logger) {
 	go func() {
 		for {
-			s.Latency = performHealthCheck(s.URL)
+			s.Latency = performHealthCheck(s)
 
 			if !isHealthy(s.Latency, healthCheckInterval) {
 				s.IsHealthy = false
@@ -26,14 +26,15 @@ func setupHealthCheck(s *loadbalancer.Server, healthCheckInterval time.Duration,
 					zap.Duration("latency", s.Latency))
 			}
 
-			time.Sleep(healthCheckInterval)
+			s.Mu.Unlock()
 		}
 	}()
 }
 
-func performHealthCheck(url string) time.Duration {
+func performHealthCheck(s *loadbalancer.Server) time.Duration {
 	start := time.Now()
-	res, err := http.Head(url)
+	res, err := http.Head(s.URL)
+	s.Mu.Lock()
 	if err != nil || res.StatusCode != http.StatusOK {
 		return 0
 	}

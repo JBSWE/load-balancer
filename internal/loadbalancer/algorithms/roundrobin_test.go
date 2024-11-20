@@ -13,6 +13,7 @@ func createTestServer(urlStr string, healthy bool, exclusionTime time.Time) *loa
 		URL:           urlStr,
 		IsHealthy:     healthy,
 		ExclusionTime: exclusionTime,
+		Mu:            sync.Mutex{},
 	}
 }
 
@@ -70,31 +71,42 @@ func TestRoundRobin_SingleServer(t *testing.T) {
 }
 
 func TestRoundRobin_Concurrency(t *testing.T) {
+	// Creating test servers
 	servers := []*loadbalancer.Server{
 		createTestServer("http://server1", true, time.Time{}),
 		createTestServer("http://server2", true, time.Time{}),
 	}
 
+	// Create RoundRobin load balancer
 	lb := NewRoundRobin()
 
-	var result []string
-	var mu sync.Mutex
+	// Channel to safely accumulate results
+	resultCh := make(chan string, 20) // Buffered channel to hold 20 results
 	var wg sync.WaitGroup
 
+	// Run 2 goroutines concurrently
 	for i := 0; i < 2; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 10; i++ {
-				mu.Lock()
-				result = append(result, lb.GetServer(servers).URL)
-				mu.Unlock()
+				// Send result to the channel
+				resultCh <- lb.GetServer(servers).URL
 			}
 		}()
 	}
 
+	// Wait for all goroutines to finish
 	wg.Wait()
+	close(resultCh)
 
+	// Collect results from the channel into a slice
+	var result []string
+	for r := range resultCh {
+		result = append(result, r)
+	}
+
+	// Validate the results
 	assert.Contains(t, result, "http://server1")
 	assert.Contains(t, result, "http://server2")
 	assert.Equal(t, 20, len(result))

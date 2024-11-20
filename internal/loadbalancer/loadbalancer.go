@@ -1,6 +1,7 @@
 package loadbalancer
 
 import (
+	"sync"
 	"time"
 )
 
@@ -9,6 +10,7 @@ type Server struct {
 	IsHealthy     bool
 	ExclusionTime time.Time
 	Latency       time.Duration
+	Mu            sync.Mutex
 }
 
 func NewServer(urlString string, isHealthy bool, exclusionTime time.Time) (*Server, error) {
@@ -17,6 +19,7 @@ func NewServer(urlString string, isHealthy bool, exclusionTime time.Time) (*Serv
 		URL:           urlString,
 		IsHealthy:     isHealthy,
 		ExclusionTime: exclusionTime,
+		Mu:            sync.Mutex{},
 	}, nil
 }
 

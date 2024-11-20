@@ -23,9 +23,12 @@ func (lb *RoundRobin) GetServer(servers []*loadbalancer.Server) *loadbalancer.Se
 		nextServer := servers[idx]
 		lb.Current++
 
+		nextServer.Mu.Lock()
 		if nextServer.IsHealthy && !nextServer.IsExcludable() {
+			nextServer.Mu.Unlock()
 			return nextServer
 		}
+		nextServer.Mu.Unlock()
 	}
 
 	return nil
